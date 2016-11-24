@@ -15,7 +15,7 @@
 #' @examples
 #' doc3 <- read_docx(system.file("examples/data3.docx", package="docxtractr"))
 #' docx_extract_tbl(doc3, 3)
-docx_extract_tbl <- function(docx, tbl_number=1, header=TRUE, trim=TRUE) {
+docx_extract_tbl <- function(docx, tbl_number=1, header=TRUE, trim=TRUE, collapse=" ") {
 
   ensure_docx(docx)
   if ((tbl_number < 1) | (tbl_number > docx_tbl_count(docx))) {
@@ -25,12 +25,17 @@ docx_extract_tbl <- function(docx, tbl_number=1, header=TRUE, trim=TRUE) {
   ns <- docx$ns
   tbl <- docx$tbls[[tbl_number]]
 
+  cell_elements <- xml_find_all(tbl, "./w:tr/w:tc//w:t", ns=ns)
   cells <- xml_find_all(tbl, "./w:tr/w:tc", ns=ns)
   rows <- xml_find_all(tbl, "./w:tr", ns=ns)
 
   bind_rows(lapply(rows, function(row) {
-
-    vals <- xml_text(xml_find_all(row, "./w:tc", ns=ns), trim=trim)
+    
+    row_cells <- xml_find_all(row, "./w:tc", ns=ns)
+    vals <- lapply(row_cells, function(c) {
+      paste0(xml_text(xml_find_all(c, ".//w:t", ns=ns), trim=trim), collapse=collapse)
+    })
+    
     names(vals) <- sprintf("V%d", 1:length(vals))
     data.frame(as.list(vals), stringsAsFactors=FALSE)
 
